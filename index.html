@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>University Attendance System</title>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<style>
+:root {
+--primary: #2c3e50;
+--success: #27ae60;
+--danger: #e74c3c;
+--warning: #f1c40f;
+--light: #f4f7f6;
+--accent: #3498db;
+}
+
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+margin: 0;
+background: var(--light);
+color: #333;
+}
+
+header {
+background: var(--primary);
+color: white;
+padding: 12px 20px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+position: sticky;
+top: 0;
+z-index: 100;
+box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+#status-container {
+display: flex;
+align-items: center;
+gap: 6px;
+font-size: 0.7rem;
+opacity: 0.9;
+}
+
+#status-dot {
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: #999;
+}
+
+.online {
+background: #2ecc71 !important;
+box-shadow: 0 0 5px #2ecc71;
+}
+
+.offline {
+background: #e74c3c !important;
+box-shadow: 0 0 5px #e74c3c;
+}
+
+.menu-container {
+position: relative;
+}
+
+.three-dots {
+background: none;
+border: none;
+color: white;
+font-size: 24px;
+cursor: pointer;
+padding: 5px;
+line-height: 1;
+}
+
+.dropdown {
+position: absolute;
+right: 0;
+top: 40px;
+background: white;
+border-radius: 8px;
+box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+display: none;
+min-width: 180px;
+z-index: 200;
+overflow: hidden;
+}
+
+.dropdown.show {
+display: block;
+}
+
+.dropdown-item {
+padding: 14px 16px;
+color: #333;
+cursor: pointer;
+border-bottom: 1px solid #eee;
+font-size: 0.9rem;
+}
+
+.controls {
+padding: 15px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+background: white;
+border-bottom: 1px solid #ddd;
+}
+
+.selector-group {
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+
+label {
+font-size: 0.7rem;
+color: #7f8c8d;
+font-weight: bold;
+margin-bottom: -5px;
+margin-left: 5px;
+}
+
+select {
+width: 100%;
+padding: 12px;
+border-radius: 8px;
+border: 1px solid #ccc;
+background: white;
+font-weight: bold;
+font-size: 0.9rem;
+}
+
+.btn-main {
+border: none;
+padding: 14px;
+border-radius: 8px;
+font-weight: bold;
+cursor: pointer;
+color: white;
+transition: 0.2s;
+}
+
+.btn-add {
+background: var(--accent);
+}
+
+.btn-present {
+background: var(--success);
+}
+
+#student-list {
+list-style: none;
+padding: 0;
+margin: 0 0 50px 0;
+}
+
+.student-card {
+background: white;
+margin: 8px 15px;
+padding: 12px;
+border-radius: 12px;
+box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.card-top {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 10px;
+}
+
+.info {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.avatar {
+width: 40px;
+height: 40px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: bold;
+color: #555;
+}
+
+.gender-tag {
+font-size: 0.65rem;
+background: #eee;
+padding: 2px 6px;
+border-radius: 4px;
+text-transform: uppercase;
+margin-left: 5px;
+color: #666;
+}
+
+.status-group {
+display: flex;
+gap: 8px;
+}
+
+.btn-status {
+flex: 1;
+border: 1px solid #eee;
+padding: 10px;
+border-radius: 6px;
+background: #f9f9f9;
+font-weight: bold;
+color: #888;
+cursor: pointer;
+}
+
+.btn-status.active-p {
+background: var(--success) !important;
+color: white !important;
+border-color: var(--success);
+}
+
+.btn-status.active-a {
+background: var(--danger) !important;
+color: white !important;
+border-color: var(--danger);
+}
+
+.btn-status.active-l {
+background: var(--warning) !important;
+color: white !important;
+border-color: var(--warning);
+}
+
+.modal-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background: rgba(0,0,0,0.5);
+display: none;
+justify-content: center;
+align-items: center;
+z-index: 1000;
+}
+
+.modal {
+background: white;
+padding: 25px;
+border-radius: 15px;
+width: 90%;
+max-width: 350px;
+}
+
+input, .modal select {
+width: 100%;
+padding: 12px;
+margin: 5px 0 15px 0;
+border: 1px solid #ddd;
+border-radius: 8px;
+box-sizing: border-box;
+}
+
+#print-header {
+display: none;
+}
+
+@media print {
+header, .controls, .status-group, .three-dots, .avatar, button[onclick^="deleteStudent"] {
+display: none !important;
+}
+body {
+background: white;
+}
+#print-header {
+display: block !important;
+padding: 20px;
+border-bottom: 2px solid #333;
+margin-bottom: 20px;
+}
+.student-card {
+box-shadow: none;
+border-bottom: 1px solid #eee;
+margin: 0;
+padding: 10px 5px;
+}
+.student-card::after {
+content: "Status: " attr(data-status);
+float: right;
+font-weight: bold;
+text-transform: uppercase;
+font-size: 0.9rem;
+}
+}
+</style>
+</head>
+<body onclick="closeMenu()">
+<div id="print-header">
+<h2 style="margin: 0;">Attendance Report</h2>
+<div id="print-details" style="margin-top: 10px; line-height: 1.6;">
+</div>
+</div>
+<header>
+<div>
+<div id="status-container">
+<span id="status-dot"></span>
+<span id="status-text">CONNECTING...</span>
+</div>
+<div id="display-title" style="font-weight: bold; font-size: 0.9rem; margin-top: 2px;">University Attendance</div>
+</div>
+<div class="menu-container">
+<button class="three-dots" onclick="toggleMenu(event)">⋮</button>
+<div id="actionMenu" class="dropdown">
+<div class="dropdown-item" onclick="prepareAndPrint()">Export / Print PDF</div>
+</div>
+</div>
+</header>
+<main>
+<div class="controls">
+<div class="selector-group">
+<label>COLLEGE / SCHOOL</label>
+<select id="collegeSelect" onchange="updateProgramDropdown()">
+<option value="CCSICT">College of Computing Studies, ICT</option>
+<option value="COL">College of Law</option>
+<option value="COE">College of Education</option>
+<option value="PS">Polytechnic School</option>
+<option value="CAS">School of Arts and Sciences</option>
+<option value="CBM">College of Business and Management</option>
+<option value="IAT">Institute of Agricultural Technology</option>
+</select>
+<label>PROGRAM</label>
+<select id="progSelect" onchange="updateMajorDropdown()"></select>
+<label>MAJOR / SPECIALIZATION</label>
+<select id="majorSelect" onchange="loadStudents()"></select>
+</div>
+<button class="btn-main btn-add" onclick="openModal()">+ Add New Student</button>
+<button class="btn-main btn-present" onclick="markAllPresent()">Quick Action: All Present</button>
+</div>
+<ul id="student-list"></ul>
+</main>
+<div id="modalOverlay" class="modal-overlay">
+<div class="modal">
+<h3 style="margin-top:0;">New Student</h3>
+<label>Full Name</label>
+<input type="text" id="newName" placeholder="Name">
+<label>Student ID</label>
+<input type="text" id="newID" placeholder="ID Number">
+<label>Gender</label>
+<select id="newGender">
+<option value="Male">Male</option>
+<option value="Female">Female</option>
+</select>
+<div style="display:flex; gap:10px; margin-top: 10px;">
+<button class="btn-main" style="background:#eee; color:#666; flex:1;" onclick="closeModal()">Cancel</button>
+<button class="btn-main btn-add" style="flex:1;" onclick="saveStudent()">Save</button>
+</div>
+</div>
+</div>
+<script>
+const firebaseConfig = {
+apiKey: "AIzaSyCIMc_2zv-eOCRU9oerxmsH5SzVhs_UfrI",
+authDomain: "classroom-attendance-f2660.firebaseapp.com",
+projectId: "classroom-attendance-f2660",
+storageBucket: "classroom-attendance-f2660.firebasestorage.app",
+messagingSenderId: "799271927922",
+appId: "1:799271927922:web:cebbc5397050edacc502eb",
+measurementId: "G-KX04PRNP2Q"
+};
+firebase.initializeApp(firebaseConfig);
+const firestore = firebase.firestore();
+firestore.enablePersistence().catch(err => {
+console.log(err.code);
+});
+const universityMap = {
+"CCSICT": {
+"BS Information Technology": ["Networking and Security", "Business Analytics", "Service Management for BPO", "Web and Mobile Application Development"],
+"BS Computer Science": ["Data Mining", "Business Analytics"],
+"BS Entertainment and Multimedia Computing": ["Game Development", "Digital Animation"],
+"Graduate Programs": ["Doctor in Information Technology", "Master in Information Technology", "Diploma in Data Science Analytics"]
+},
+"COL": {
+"Graduate Program": ["Juris Doctor (JD)"]
+},
+"COE": {
+"B. Secondary Education": ["English", "Science", "Filipino", "Mathematics"],
+"B. Elementary Education": ["General Curriculum"],
+"B. Physical Education": ["General Curriculum"]
+},
+"PS": {
+"BS Industrial Technology": ["Automotive Technology", "Electronics Technology"]
+},
+"CAS": {
+"BA English Language Studies": ["General"],
+"BA Political Science": ["General"],
+"BS Psychology": ["General"],
+"BS Food Technology": ["General"]
+},
+"CBM": {
+"BS Business Administration": ["Financial Management"],
+"BS Hospitality Management": ["General"],
+"BS Tourism Management": ["General"],
+"BS Accounting Information System": ["General"],
+"BS Management Accounting": ["General"],
+"BS Entrepreneurship": ["General"],
+"BS Legal Management": ["General"]
+},
+"IAT": {
+"BS Agriculture": ["General"]
+}
+};
+let currentStudents = [];
+let unsubscribe = null;
+function updateConnStatus() {
+const dot = document.getElementById('status-dot');
+const txt = document.getElementById('status-text');
+dot.className = navigator.onLine ? 'online' : 'offline';
+txt.innerText = navigator.onLine ? 'ONLINE' : 'OFFLINE MODE';
+}
+window.addEventListener('online', updateConnStatus);
+window.addEventListener('offline', updateConnStatus);
+updateConnStatus();
+function toggleMenu(e) {
+e.stopPropagation();
+document.getElementById("actionMenu").classList.toggle("show");
+}
+function closeMenu() {
+document.getElementById("actionMenu").classList.remove("show");
+}
+function updateProgramDropdown() {
+const college = document.getElementById('collegeSelect').value;
+const progDropdown = document.getElementById('progSelect');
+progDropdown.innerHTML = "";
+Object.keys(universityMap[college]).forEach(prog => {
+const opt = document.createElement('option');
+opt.value = prog;
+opt.innerText = prog;
+progDropdown.appendChild(opt);
+});
+updateMajorDropdown();
+}
+function updateMajorDropdown() {
+const college = document.getElementById('collegeSelect').value;
+const prog = document.getElementById('progSelect').value;
+const majorDropdown = document.getElementById('majorSelect');
+majorDropdown.innerHTML = "";
+universityMap[college][prog].forEach(major => {
+const opt = document.createElement('option');
+opt.value = major;
+opt.innerText = major;
+majorDropdown.appendChild(opt);
+});
+loadStudents();
+}
+function getStudentRef() {
+const college = document.getElementById('collegeSelect').value;
+const prog = document.getElementById('progSelect').value;
+const major = document.getElementById('majorSelect').value;
+return firestore.collection("colleges").doc(college).collection("programs").doc(prog).collection("majors").doc(major).collection("students");
+}
+function loadStudents() {
+const college = document.getElementById('collegeSelect').value;
+const prog = document.getElementById('progSelect').value;
+const major = document.getElementById('majorSelect').value;
+document.getElementById('display-title').innerText = `${college} | ${prog}`;
+if (unsubscribe) unsubscribe();
+unsubscribe = getStudentRef().orderBy("createdAt", "asc").onSnapshot((snapshot) => {
+currentStudents = [];
+snapshot.forEach(doc => {
+currentStudents.push({ docId: doc.id, ...doc.data() });
+});
+renderUI();
+});
+}
+function renderUI() {
+const list = document.getElementById('student-list');
+if(currentStudents.length === 0) {
+list.innerHTML = `<div style="text-align:center; padding:60px 20px; color:#999; font-style:italic;">No students found.</div>`;
+return;
+}
+list.innerHTML = currentStudents.map(s => `
+<li class="student-card" data-status="${s.status.toUpperCase()}">
+<div class="card-top">
+<div class="info">
+<div class="avatar" style="background:${s.gender === 'Female' ? '#ffdde1' : '#d1e3ff'}">${s.name.charAt(0)}</div>
+<div>
+<div style="font-weight:bold;">${s.name} <span class="gender-tag">${s.gender}</span></div>
+<div style="font-size:0.75rem; color:#888;">ID: ${s.studentId}</div>
+</div>
+</div>
+<button onclick="deleteStudent('${s.docId}')" style="color:#ddd; border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
+</div>
+<div class="status-group">
+<button class="btn-status ${s.status === 'present' ? 'active-p' : ''}" onclick="setStatus('${s.docId}', 'present')">P</button>
+<button class="btn-status ${s.status === 'absent' ? 'active-a' : ''}" onclick="setStatus('${s.docId}', 'absent')">A</button>
+<button class="btn-status ${s.status === 'late' ? 'active-l' : ''}" onclick="setStatus('${s.docId}', 'late')">L</button>
+</div>
+</li>
+`).join('');
+}
+function prepareAndPrint() {
+const college = document.getElementById('collegeSelect').selectedOptions[0].text;
+const program = document.getElementById('progSelect').value;
+const major = document.getElementById('majorSelect').value;
+const date = new Date().toLocaleDateString('en-PH', {
+dateStyle: 'full'
+});
+document.getElementById('print-details').innerHTML = `
+<strong>College:</strong> ${college}<br>
+<strong>Program:</strong> ${program}<br>
+<strong>Section/Major:</strong> ${major}<br>
+<strong>Date Generated:</strong> ${date}
+`;
+window.print();
+}
+async function saveStudent() {
+const name = document.getElementById('newName').value;
+const studentId = document.getElementById('newID').value;
+const gender = document.getElementById('newGender').value;
+if(!name || !studentId) return alert("Fill in fields!");
+await getStudentRef().add({
+name,
+studentId,
+gender,
+status: 'present',
+createdAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+closeModal();
+document.getElementById('newName').value = '';
+document.getElementById('newID').value = '';
+}
+function setStatus(docId, status) {
+getStudentRef().doc(docId).update({
+status: status
+});
+}
+function deleteStudent(docId) {
+if(confirm("Delete student?")) {
+getStudentRef().doc(docId).delete();
+}
+}
+function markAllPresent() {
+const batch = firestore.batch();
+currentStudents.forEach(s => {
+batch.update(getStudentRef().doc(s.docId), {
+status: 'present'
+});
+});
+batch.commit();
+}
+function openModal() {
+document.getElementById('modalOverlay').style.display = 'flex';
+}
+function closeModal() {
+document.getElementById('modalOverlay').style.display = 'none';
+}
+updateProgramDropdown();
+</script>
+</body>
+</html>

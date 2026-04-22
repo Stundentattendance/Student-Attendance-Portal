@@ -1,0 +1,17 @@
+{
+  "short_name": "Attendance",
+  "name": "University Student Attendance System",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3589/3589030.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#2c3e50",
+  "display": "standalone",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait"
+}
